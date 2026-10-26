@@ -24,6 +24,22 @@ export function maskApiKey(key: string): string {
   return `${start}${masked}${end}`;
 }
 
+const USD_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  // 小额消费需要更多精度（$1.2345），同时避免整数额度出现多余的零。
+  maximumFractionDigits: 4,
+});
+
+/**
+ * 以美元格式化金额：$20.00 / $1.2345
+ */
+export function formatUsd(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  return USD_FORMATTER.format(value);
+}
+
 /**
  * 格式化文件大小
  */

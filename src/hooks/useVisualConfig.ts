@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import { isMap, isScalar, isSeq, parse as parseYaml, parseDocument } from 'yaml';
-import type { Node, Pair, YAMLMap, YAMLSeq } from 'yaml';
+import type { Document, Node, Pair, YAMLMap, YAMLSeq } from 'yaml';
 import type {
   DisableImageGenerationMode,
   PluginStoreAuthApplyTo,
@@ -18,6 +18,11 @@ import type {
 } from '@/types/visualConfig';
 import { DEFAULT_VISUAL_VALUES } from '@/types/visualConfig';
 import { assertConfigListsUnchanged, ConfigDraftConflictError } from '@/services/api/configPatch';
+import {
+  areClientApiKeysEqual,
+  clientApiKeyWritePayload,
+  normalizeClientApiKeys,
+} from '@/utils/clientApiKeys';
 import {
   ADDITION_FIELDS,
   ICE_KEY,
@@ -39,18 +44,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function parseApiKeysText(raw: unknown): string {
-  if (!Array.isArray(raw)) return '';
-
-  const keys: string[] = [];
-  for (const item of raw) {
-    const key = typeof item === 'string' ? item.trim() : '';
-    if (key) keys.push(key);
-  }
-  return keys.join('\n');
-}
-
-type YamlDocument = ReturnType<typeof parseDocument>;
+type YamlDocument = Document;
 type YamlPath = string[];
 
 function docHas(doc: YamlDocument, path: YamlPath): boolean {
@@ -1239,7 +1233,6 @@ function getNextDirtyFields(
       'rmDisableControlPanel',
       'rmPanelRepo',
       'authDir',
-      'apiKeysText',
       'debug',
       'commercialMode',
       'loggingToFile',
@@ -1257,6 +1250,9 @@ function getNextDirtyFields(
     ] as Array<keyof VisualConfigValues>
   ).forEach(updateScalarDirty);
 
+  if (Object.prototype.hasOwnProperty.call(patch, 'apiKeys')) {
+    updateDirty('apiKeys', areClientApiKeysEqual(nextValues.apiKeys, baselineValues.apiKeys));
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'pluginStoreSources')) {
     updateDirty(
       'pluginStoreSources',
@@ -1454,7 +1450,7 @@ function parseVisualValuesFromYaml(yamlContent: string): VisualConfigValues {
         : '',
 
     authDir: typeof v8Oauth?.['auth-dir'] === 'string' ? v8Oauth?.['auth-dir'] : '',
-    apiKeysText: parseApiKeysText(asRecord(parsed.access)?.['api-keys']),
+    apiKeys: normalizeClientApiKeys(asRecord(parsed.access)?.['api-keys']),
     pluginsEnabled: Boolean(plugins?.enabled),
     pluginStoreSources: parseStringList(plugins?.['store-sources']),
     pluginStoreAuth: parsePluginStoreAuthRules(plugins?.['store-auth']),
@@ -1726,11 +1722,8 @@ export function useVisualConfig() {
         }
 
         if (dirtyFields.has('authDir')) setStringInDoc(doc, ['oauth', 'auth-dir'], values.authDir);
-        if (dirtyFields.has('apiKeysText')) {
-          const apiKeys = values.apiKeysText
-            .split('\n')
-            .map((key) => key.trim())
-            .filter(Boolean);
+        if (dirtyFields.has('apiKeys')) {
+          const apiKeys = clientApiKeyWritePayload(values.apiKeys);
           if (apiKeys.length > 0) {
             doc.setIn(['access', 'api-keys'], apiKeys);
           } else if (docHas(doc, ['access', 'api-keys'])) {

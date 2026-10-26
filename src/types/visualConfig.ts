@@ -1,3 +1,5 @@
+import type { ClientApiKeyEntry } from './config';
+
 export type PayloadParamValueType = 'string' | 'number' | 'boolean' | 'json';
 export type DisableImageGenerationMode = 'false' | 'true' | 'chat' | 'passthrough';
 export type RoutingStrategy = 'round-robin' | 'weighted-round-robin' | 'fill-first';
@@ -166,7 +168,7 @@ export type VisualConfigValues = {
   rmPanelRepo: string;
   authDir: string;
   /** Client authentication keys at access.api-keys (never the upstream api-keys map). */
-  apiKeysText: string;
+  apiKeys: ClientApiKeyEntry[];
   pluginsEnabled: boolean;
   pluginStoreSources: string[];
   pluginStoreAuth: PluginStoreAuthRule[];
@@ -268,7 +270,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmDisableAutoUpdatePanel: false,
   rmPanelRepo: '',
   authDir: '',
-  apiKeysText: '',
+  apiKeys: [],
   pluginsEnabled: false,
   pluginStoreSources: [],
   pluginStoreAuth: [],

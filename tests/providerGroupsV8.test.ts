@@ -52,7 +52,7 @@ describe('v8 provider groups', () => {
     expect(config.codexApiKeys?.map((r) => r.priority)).toEqual([8, 0]);
     expect(config.codexApiKeys?.[0].source).toMatchObject({ groupIndex: 0, keyIndex: 0, group });
     expect(config.providerGroups?.codex).toHaveLength(2);
-    expect(config.apiKeys).toEqual(['client-fixture']);
+    expect(config.apiKeys).toEqual([{ key: 'client-fixture' }]);
     expect(config.debug).toBe(true);
     expect(config.requestRetry).toBe(4);
     expect(config.proxyUrl).toBe('direct');

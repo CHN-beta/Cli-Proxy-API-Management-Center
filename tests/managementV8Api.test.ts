@@ -23,16 +23,44 @@ const mock = (
 afterEach(() => spies.splice(0).forEach((spy) => spy.mockRestore()));
 
 describe('v8 management API contracts', () => {
-  test('client keys read direct lists and replace whole lists for update/delete', async () => {
-    const get = mock('get', ['first', 'second']);
+  test('client keys read structured lists and replace only writable fields', async () => {
+    const get = mock('get', [
+      {
+        key: 'first',
+        name: 'self',
+        quota: 5,
+        used: 1.5,
+        'current-month': '2026-10',
+        'key-hash': 'fixture-hash',
+      },
+      'second',
+    ]);
     const put = mock('put');
-    expect(await apiKeysApi.list()).toEqual(['first', 'second']);
+    expect(await apiKeysApi.list()).toEqual([
+      {
+        key: 'first',
+        name: 'self',
+        quota: 5,
+        used: 1.5,
+        'current-month': '2026-10',
+        'key-hash': 'fixture-hash',
+      },
+      { key: 'second' },
+    ]);
     expect(get).toHaveBeenCalledWith('/config/access/api-keys');
     await apiKeysApi.update(1, 'updated');
-    expect(put).toHaveBeenLastCalledWith('/config/access/api-keys', ['first', 'updated']);
-    get.mockResolvedValue(['first', 'second']);
+    expect(put).toHaveBeenLastCalledWith('/config/access/api-keys', [
+      { key: 'first', name: 'self', quota: 5 },
+      { key: 'updated' },
+    ]);
+    get.mockResolvedValue([
+      { key: 'first', used: 1.5, 'key-hash': 'fixture-hash' },
+      { key: 'second', quota: 10 },
+    ]);
     await apiKeysApi.delete(0);
-    expect(put).toHaveBeenLastCalledWith('/config/access/api-keys', ['second']);
+    expect(put).toHaveBeenLastCalledWith('/config/access/api-keys', [
+      { key: 'second', quota: 10 },
+    ]);
     await expect(apiKeysApi.update(-1, 'bad')).rejects.toBeInstanceOf(RangeError);
     expect(put).toHaveBeenCalledTimes(2);
   });

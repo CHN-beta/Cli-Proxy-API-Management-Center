@@ -151,7 +151,7 @@ describe('resolveDirtyTabs', () => {
   });
 
   test('a common field lights both the common tab and its canonical section', () => {
-    const tabs = resolveDirtyTabs(new Set(['apiKeysText']));
+    const tabs = resolveDirtyTabs(new Set(['apiKeys']));
     expect(tabs.has('common')).toBe(true);
     expect(tabs.has('connectivity')).toBe(true);
     expect(tabs.size).toBe(2);

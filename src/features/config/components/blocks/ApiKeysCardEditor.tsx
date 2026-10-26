@@ -1,135 +1,192 @@
-import { memo, useId, useMemo, useState } from 'react';
+import { memo, useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useAuthStore, useNotificationStore } from '@/stores';
-import { apiKeyNameFingerprint, readApiKeyNames, saveApiKeyName } from '../../apiKeyNames';
+import type { ClientApiKeyEntry } from '@/types/config';
+import { apiKeysApi } from '@/services/api/apiKeys';
+import {
+  areClientApiKeysEqual,
+  mergeClientApiKeyUsage,
+  summarizeClientApiKeyUsage,
+} from '@/utils/clientApiKeys';
 import { copyToClipboard } from '@/utils/clipboard';
-import { makeClientId } from '@/types/visualConfig';
 import { generateSecureApiKey } from '@/utils/apiKey';
-import { maskApiKey } from '@/utils/format';
+import { formatPercent, formatUsd, maskApiKey } from '@/utils/format';
 import { isValidApiKeyCharset } from '@/utils/validation';
 import { ApiKeyStrengthMeter } from './ApiKeyStrengthMeter';
 import styles from './Blocks.module.scss';
 
 interface ApiKeysCardEditorProps {
-  value: string;
+  value: ClientApiKeyEntry[];
   disabled?: boolean;
-  onChange: (nextValue: string) => void;
+  onChange: (nextValue: ClientApiKeyEntry[]) => void;
 }
 
-export const ApiKeysCardEditor = memo(function ApiKeysCardEditor(props: ApiKeysCardEditorProps) {
-  const apiBase = useAuthStore((state) => state.apiBase);
-  return <ScopedApiKeysCardEditor key={apiBase} {...props} apiBase={apiBase} />;
-});
+/** 单条密钥的当月消费 / 额度状态；不限额时不渲染进度条。 */
+function ApiKeyQuotaStatus({ entry }: { entry: ClientApiKeyEntry }) {
+  const { t } = useTranslation();
+  const usage = summarizeClientApiKeyUsage(entry);
+  const used = formatUsd(usage.used);
+  const quota = usage.quota === undefined ? undefined : formatUsd(usage.quota);
+  const percent = usage.percent ?? 0;
+  const usageText =
+    quota === undefined
+      ? t('config_management.visual.api_keys.quota.unlimited', { used })
+      : t('config_management.visual.api_keys.quota.usage', { used, quota });
 
-function ScopedApiKeysCardEditor({
+  return (
+    <span className={styles.apiKeyQuota} data-tone={usage.tone}>
+      {usage.month && (
+        <span
+          className={styles.apiKeyQuotaMonth}
+          aria-label={t('config_management.visual.api_keys.quota.month_label', {
+            month: usage.month,
+          })}
+        >
+          {usage.month}
+        </span>
+      )}
+      <span className={styles.apiKeyQuotaText}>{usageText}</span>
+      {quota !== undefined && (
+        <>
+          <span className={styles.apiKeyQuotaPercent}>{formatPercent(percent)}</span>
+          <span
+            className={styles.apiKeyQuotaTrack}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(percent)}
+            aria-valuetext={`${formatPercent(percent)} — ${usageText}`}
+            aria-label={t('config_management.visual.api_keys.quota.aria_label')}
+          >
+            <span
+              className={styles.apiKeyQuotaFill}
+              style={{ transform: `scaleX(${percent / 100})` }}
+            />
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
+export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
   disabled,
   onChange,
-  apiBase,
-}: ApiKeysCardEditorProps & { apiBase: string }) {
-  const [names, setNames] = useState(() => readApiKeyNames(apiBase));
-  const [nameValue, setNameValue] = useState('');
+}: ApiKeysCardEditorProps) {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
-  const apiKeys = useMemo(
-    () =>
-      value
-        .split('\n')
-        .map((key) => key.trim())
-        .filter(Boolean),
-    [value]
-  );
-  const nameFingerprints = useMemo(
-    () => apiKeys.map((key) => apiKeyNameFingerprint(apiBase, key)),
-    [apiBase, apiKeys]
-  );
-  const [apiKeyIds, setApiKeyIds] = useState(() => apiKeys.map(() => makeClientId()));
-  const renderApiKeyIds = useMemo(() => {
-    if (apiKeyIds.length === apiKeys.length) return apiKeyIds;
-    if (apiKeyIds.length > apiKeys.length) return apiKeyIds.slice(0, apiKeys.length);
-    return [
-      ...apiKeyIds,
-      ...Array.from({ length: apiKeys.length - apiKeyIds.length }, () => makeClientId()),
-    ];
-  }, [apiKeyIds, apiKeys.length]);
+  const apiBase = useAuthStore((state) => state.apiBase);
+  const apiKeys = value;
 
-  const apiKeyInputId = useId();
+  // 专用接口会返回当月消费；完整配置只含可写字段，因此仅用于展示，不进入表单脏值。
+  const [usageEntries, setUsageEntries] = useState<ClientApiKeyEntry[]>([]);
+  useEffect(() => {
+    setUsageEntries([]);
+    if (!apiBase) return;
+    let cancelled = false;
+    apiKeysApi
+      .list()
+      .then((entries) => {
+        if (!cancelled) setUsageEntries(entries);
+      })
+      .catch(() => {
+        // 旧后端没有该接口时保持配置中的字段即可。
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBase]);
+
+  const displayApiKeys = useMemo(
+    () => mergeClientApiKeyUsage(apiKeys, usageEntries),
+    [apiKeys, usageEntries]
+  );
+
   const nameInputId = useId();
   const nameHintId = `${nameInputId}-hint`;
+  const apiKeyInputId = useId();
   const apiKeyHintId = `${apiKeyInputId}-hint`;
   const apiKeyErrorId = `${apiKeyInputId}-error`;
+  const quotaInputId = useId();
+  const quotaHintId = `${quotaInputId}-hint`;
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingApiKeyId, setEditingApiKeyId] = useState<string | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const [nameValue, setNameValue] = useState('');
+  const [quotaValue, setQuotaValue] = useState('');
   const [formError, setFormError] = useState('');
 
   const openAddModal = () => {
-    setNameValue('');
-    setEditingApiKeyId(null);
+    setEditingIndex(null);
     setInputValue('');
+    setNameValue('');
+    setQuotaValue('');
     setFormError('');
     setModalOpen(true);
   };
 
-  const openEditModal = (apiKeyId: string) => {
-    const editingIndex = renderApiKeyIds.findIndex((id) => id === apiKeyId);
-    const latestNames = readApiKeyNames(apiBase);
-    setNames(latestNames);
-    setNameValue(latestNames[nameFingerprints[editingIndex]] ?? '');
-    setEditingApiKeyId(apiKeyId);
-    setInputValue(apiKeys[editingIndex] ?? '');
+  const openEditModal = (index: number) => {
+    const entry = displayApiKeys[index];
+    if (!entry) return;
+    setEditingIndex(index);
+    setInputValue(entry.key);
+    setNameValue(entry.name ?? '');
+    setQuotaValue(entry.quota === undefined || entry.quota === null ? '' : String(entry.quota));
     setFormError('');
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
+    setEditingIndex(null);
     setInputValue('');
-    setEditingApiKeyId(null);
+    setNameValue('');
+    setQuotaValue('');
     setFormError('');
   };
 
-  const updateApiKeys = (nextKeys: string[]) => {
-    onChange(nextKeys.join('\n'));
-  };
-
-  const handleDelete = (apiKeyId: string) => {
-    const index = renderApiKeyIds.findIndex((id) => id === apiKeyId);
-    if (index < 0) return;
-    setApiKeyIds(renderApiKeyIds.filter((id) => id !== apiKeyId));
-    updateApiKeys(apiKeys.filter((_, i) => i !== index));
+  const handleDelete = (index: number) => {
+    onChange(apiKeys.filter((_, i) => i !== index));
   };
 
   const handleSave = () => {
-    const trimmed = inputValue.trim();
-    if (!trimmed) {
+    const trimmedKey = inputValue.trim();
+    if (!trimmedKey) {
       setFormError(t('config_management.visual.api_keys.error_empty'));
       return;
     }
-    if (!isValidApiKeyCharset(trimmed)) {
+    if (!isValidApiKeyCharset(trimmedKey)) {
       setFormError(t('config_management.visual.api_keys.error_invalid'));
       return;
     }
 
-    const editingIndex = editingApiKeyId
-      ? renderApiKeyIds.findIndex((id) => id === editingApiKeyId)
-      : -1;
+    const trimmedQuota = quotaValue.trim();
+    let quota: number | undefined;
+    if (trimmedQuota) {
+      const parsedQuota = Number(trimmedQuota);
+      if (!Number.isFinite(parsedQuota) || parsedQuota < 0) {
+        setFormError(t('config_management.visual.api_keys.error_quota_invalid'));
+        return;
+      }
+      quota = parsedQuota;
+    }
+
+    // 只写可写字段；used / current-month / key-hash 由展示层的专用接口提供。
+    const nextEntry: ClientApiKeyEntry = { key: trimmedKey };
+    const trimmedName = nameValue.trim();
+    if (trimmedName) nextEntry.name = trimmedName;
+    if (quota !== undefined) nextEntry.quota = quota;
+
     const nextKeys =
-      editingApiKeyId === null
-        ? [...apiKeys, trimmed]
-        : apiKeys.map((key, idx) => (idx === editingIndex ? trimmed : key));
-    if (!saveApiKeyName(apiBase, trimmed, nameValue)) {
-      setFormError(t('config_management.visual.api_keys.name_save_error'));
-      return;
-    }
-    setNames(readApiKeyNames(apiBase));
-    // Retain old fingerprints: configuration edits can still be discarded or fail to save.
-    if (editingApiKeyId === null) {
-      setApiKeyIds([...renderApiKeyIds, makeClientId()]);
-    }
-    if (nextKeys.join('\n') !== apiKeys.join('\n')) updateApiKeys(nextKeys);
+      editingIndex === null
+        ? [...apiKeys, nextEntry]
+        : apiKeys.map((entry, index) => (index === editingIndex ? nextEntry : entry));
+
+    if (!areClientApiKeysEqual(nextKeys, apiKeys)) onChange(nextKeys);
     closeModal();
   };
 
@@ -164,21 +221,21 @@ function ScopedApiKeysCardEditor({
         <div className={styles.emptyState}>{t('config_management.visual.api_keys.empty')}</div>
       ) : (
         <ol className={styles.apiKeyList}>
-          {apiKeys.map((key, index) => (
-            <li key={renderApiKeyIds[index] ?? `${key}-${index}`} className={styles.apiKeyRow}>
+          {displayApiKeys.map((entry, index) => (
+            <li key={index} className={styles.apiKeyRow}>
               <span className={styles.apiKeyIndex}>#{index + 1}</span>
               <span className={styles.apiKeyMeta}>
-                <span className={styles.apiKeyName}>
-                  {names[nameFingerprints[index]] ??
-                    t('config_management.visual.api_keys.input_label')}
+                <span className={styles.apiKeyIdentity}>
+                  {entry.name && <span className={styles.apiKeyName}>{entry.name}</span>}
+                  <span className={styles.apiKeyValue}>{maskApiKey(entry.key)}</span>
                 </span>
-                <span className={styles.apiKeyValue}>{maskApiKey(String(key || ''))}</span>
+                <ApiKeyQuotaStatus entry={entry} />
               </span>
               <span className={styles.apiKeyActions}>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleCopy(key)}
+                  onClick={() => handleCopy(entry.key)}
                   disabled={disabled}
                 >
                   {t('common.copy')}
@@ -186,7 +243,7 @@ function ScopedApiKeysCardEditor({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => openEditModal(renderApiKeyIds[index] ?? '')}
+                  onClick={() => openEditModal(index)}
                   disabled={disabled}
                 >
                   {t('config_management.visual.common.edit')}
@@ -195,7 +252,7 @@ function ScopedApiKeysCardEditor({
                   variant="ghost"
                   size="sm"
                   className={styles.apiKeyDelete}
-                  onClick={() => handleDelete(renderApiKeyIds[index] ?? '')}
+                  onClick={() => handleDelete(index)}
                   disabled={disabled}
                 >
                   {t('config_management.visual.common.delete')}
@@ -210,7 +267,7 @@ function ScopedApiKeysCardEditor({
         open={modalOpen}
         onClose={closeModal}
         title={
-          editingApiKeyId !== null
+          editingIndex !== null
             ? t('config_management.visual.api_keys.edit_title')
             : t('config_management.visual.api_keys.add_title')
         }
@@ -220,7 +277,7 @@ function ScopedApiKeysCardEditor({
               {t('config_management.visual.common.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={disabled}>
-              {editingApiKeyId !== null
+              {editingIndex !== null
                 ? t('config_management.visual.common.update')
                 : t('config_management.visual.common.add')}
             </Button>
@@ -228,7 +285,9 @@ function ScopedApiKeysCardEditor({
         }
       >
         <div className="form-group">
-          <label htmlFor={nameInputId}>{t('config_management.visual.api_keys.name_label')}</label>
+          <label htmlFor={nameInputId}>
+            {t('config_management.visual.api_keys.name_label')}
+          </label>
           <input
             id={nameInputId}
             className="input"
@@ -277,7 +336,28 @@ function ScopedApiKeysCardEditor({
             </div>
           )}
         </div>
+        <div className="form-group">
+          <label htmlFor={quotaInputId}>
+            {t('config_management.visual.api_keys.quota_label')}
+          </label>
+          <input
+            id={quotaInputId}
+            className="input"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            placeholder={t('config_management.visual.api_keys.quota_placeholder')}
+            value={quotaValue}
+            onChange={(event) => setQuotaValue(event.target.value)}
+            aria-describedby={quotaHintId}
+            disabled={disabled}
+          />
+          <div id={quotaHintId} className="hint">
+            {t('config_management.visual.api_keys.quota_hint')}
+          </div>
+        </div>
       </Modal>
     </div>
   );
-}
+});

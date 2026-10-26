@@ -10,6 +10,7 @@ import type { Config } from '@/types/config';
 import type { ProviderRuntimePolicy, RequestScopedErrorRule } from '@/types/provider';
 import { buildHeaderObject } from '@/utils/headers';
 import { isRecord } from '@/utils/helpers';
+import { normalizeClientApiKeys } from '@/utils/clientApiKeys';
 import { readCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeModelOptions, normalizeModelThinking } from './providerModels';
 
@@ -356,10 +357,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.forceModelPrefix = normalizeBoolean(at('routing.force-model-prefix'));
   const strategy = at('routing.strategy');
   if (typeof strategy === 'string') config.routingStrategy = strategy;
-  const keys = at('access.api-keys');
-  config.apiKeys = Array.isArray(keys)
-    ? keys.filter((key): key is string => typeof key === 'string')
-    : [];
+  config.apiKeys = normalizeClientApiKeys(at('access.api-keys'));
   config.quotaExceeded = {
     antigravityCredits:
       normalizeBoolean(at('oauth.providers.antigravity.antigravity-credits')) ?? false,

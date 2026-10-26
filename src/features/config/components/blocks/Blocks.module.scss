@@ -197,16 +197,30 @@
 
 .apiKeyMeta {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 12px;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.apiKeyIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
 }
 
 .apiKeyName {
   overflow: hidden;
+  max-width: 100%;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
   color: var(--text-primary);
-  font-size: 13.5px;
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -218,6 +232,65 @@
   font-size: 12.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 当月消费 / 额度：文字与进度条同色，告警与超额只换语义色。 */
+.apiKeyQuota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+
+  &[data-tone='warning'] {
+    color: var(--amber-color);
+  }
+
+  &[data-tone='danger'] {
+    color: var(--error-color);
+  }
+
+  &[data-tone='unlimited'] {
+    color: var(--text-tertiary);
+  }
+}
+
+.apiKeyQuotaMonth {
+  color: var(--text-tertiary);
+  font-family: $font-mono;
+  font-size: 11px;
+}
+
+.apiKeyQuotaText {
+  white-space: nowrap;
+}
+
+.apiKeyQuotaPercent {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.apiKeyQuotaTrack {
+  display: block;
+  overflow: hidden;
+  width: 64px;
+  height: 4px;
+  border-radius: $radius-full;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.apiKeyQuotaFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
 }
 
 .apiKeyActions {

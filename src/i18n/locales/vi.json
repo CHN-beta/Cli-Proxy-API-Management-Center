@@ -1271,14 +1271,24 @@
         "add": "Thêm API Key",
         "generate": "Tạo",
         "empty": "Chưa có API key",
-        "hint": "Mỗi mục là một API key (nhất quán với phong cách trang 'Quản lý API Key')",
+        "hint": "Mỗi mục là một client key với tên ghi chú và hạn mức hàng tháng tùy chọn.",
         "edit_title": "Chỉnh sửa API Key",
         "add_title": "Thêm API Key",
         "input_label": "API Key",
         "input_placeholder": "Dán API key của bạn",
-        "input_hint": "Chỉ sửa nội dung file cấu hình cục bộ, không đồng bộ sang giao diện Quản lý API Key",
+        "input_hint": "Thay đổi có hiệu lực sau khi lưu cấu hình. Key của nhà cung cấp upstream được quản lý riêng.",
         "error_empty": "Vui lòng nhập API key",
         "error_invalid": "API key chứa ký tự không hợp lệ",
+        "quota_label": "Hạn mức hàng tháng (USD, để trống là không giới hạn)",
+        "quota_placeholder": "Ví dụ: 20",
+        "quota_hint": "Giới hạn chi tiêu mỗi tháng bằng USD. Để trống nếu không giới hạn.",
+        "error_quota_invalid": "Hạn mức hàng tháng phải là số lớn hơn hoặc bằng 0",
+        "quota": {
+          "usage": "Đã dùng {{used}} / {{quota}}",
+          "unlimited": "Đã dùng {{used}} / Không giới hạn",
+          "aria_label": "Mức sử dụng hạn mức hàng tháng",
+          "month_label": "Tháng tính phí {{month}}"
+        },
         "strength": {
           "label": "Độ mạnh API key",
           "empty": "Chưa nhập",
@@ -1287,10 +1297,9 @@
           "good": "Tốt",
           "strong": "Mạnh"
         },
-        "name_label": "Tên / mô tả (tùy chọn)",
+        "name_label": "Tên / ghi chú (tùy chọn)",
         "name_placeholder": "Ví dụ: Laptop của Alice",
-        "name_hint": "Được lưu ngay trong trình duyệt này, riêng cho từng máy chủ. Không bao gồm trong cấu hình máy chủ. Xóa trường này để xóa tên.",
-        "name_save_error": "Không thể lưu tên vào bộ lưu trữ trình duyệt. Vui lòng kiểm tra cài đặt lưu trữ của trình duyệt."
+        "name_hint": "Tên được lưu trong cấu hình máy chủ cùng với khóa. Xóa trường này để xóa tên."
       },
       "payload_rules": {
         "rule": "Quy tắc",

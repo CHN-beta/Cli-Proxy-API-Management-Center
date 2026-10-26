@@ -9,6 +9,30 @@ export interface QuotaExceededConfig {
   antigravityCredits?: boolean;
 }
 
+/**
+ * Client access key at `access.api-keys`.
+ * `used`, `current-month` and `key-hash` are backend-owned and never written back.
+ */
+export interface ClientApiKeyEntry {
+  key: string;
+  name?: string;
+  /** Monthly USD quota; `null`/absent means unlimited. */
+  quota?: number | null;
+  /** Current-month USD spend. */
+  used?: number;
+  /** Billing month, e.g. `"2026-10"`. */
+  'current-month'?: string;
+  /** SHA-256 hex digest of the key. */
+  'key-hash'?: string;
+}
+
+/** Writable subset accepted by `PUT /config/access/api-keys`. */
+export interface ClientApiKeyWriteEntry {
+  key: string;
+  name?: string;
+  quota?: number;
+}
+
 export interface Config {
   providerGroups?: Record<string, unknown>;
   debug?: boolean;
@@ -21,7 +45,7 @@ export interface Config {
   wsAuth?: boolean;
   forceModelPrefix?: boolean;
   routingStrategy?: string;
-  apiKeys?: string[];
+  apiKeys?: ClientApiKeyEntry[];
   geminiApiKeys?: GeminiKeyConfig[];
   interactionsApiKeys?: GeminiKeyConfig[];
   codexApiKeys?: ProviderKeyConfig[];

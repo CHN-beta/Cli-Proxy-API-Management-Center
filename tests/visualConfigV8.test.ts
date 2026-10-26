@@ -15,7 +15,7 @@ describe('v8 visual config contract', () => {
     expect(config.visualValues).toMatchObject({
       host: 'localhost',
       port: '8317',
-      apiKeysText: 'fixture-client',
+      apiKeys: [{ key: 'fixture-client' }],
       commercialMode: false,
       wsAuth: false,
       requestRetry: '0',
@@ -37,13 +37,81 @@ describe('v8 visual config contract', () => {
   });
 
   test('client key writes and deletion never replace upstream provider groups', () => {
-    for (const apiKeysText of ['new-fixture-client', '']) {
-      const config = runVisualConfig(fixture, [{ apiKeysText }]);
+    for (const apiKeys of [
+      [{ key: 'new-fixture-client', name: 'self', quota: 20 }],
+      [] as Array<{ key: string; name?: string; quota?: number }>,
+    ]) {
+      const config = runVisualConfig(fixture, [{ apiKeys }]);
       const output = parseYaml(config.applyVisualChangesToYaml(fixture));
       expect(output['api-keys']).toEqual(parseYaml(fixture)['api-keys']);
-      expect(output.access?.['api-keys']).toEqual(apiKeysText ? [apiKeysText] : undefined);
+      expect(output.access?.['api-keys']).toEqual(apiKeys.length ? apiKeys : undefined);
     }
-    expect(runVisualConfig('api-keys:\n  codex: []\n').visualValues.apiKeysText).toBe('');
+    expect(runVisualConfig('api-keys:\n  codex: []\n').visualValues.apiKeys).toEqual([]);
+  });
+
+  test('structured client keys keep backend-owned usage out of the written YAML', () => {
+    const before = `access:
+  api-keys:
+    - key: fixture-a
+      name: self
+      quota: 20
+      used: 1.2345
+      current-month: '2026-10'
+      key-hash: fixture-hash-a
+    - key: fixture-b
+      used: 0.5
+`;
+    const loaded = runVisualConfig(before);
+    expect(loaded.visualValues.apiKeys).toEqual([
+      {
+        key: 'fixture-a',
+        name: 'self',
+        quota: 20,
+        used: 1.2345,
+        'current-month': '2026-10',
+        'key-hash': 'fixture-hash-a',
+      },
+      { key: 'fixture-b', used: 0.5 },
+    ]);
+    expect(loaded.visualDirty).toBe(false);
+    expect(parseYaml(loaded.applyVisualChangesToYaml(before))).toEqual(parseYaml(before));
+
+    const refreshed = runVisualConfig(before, [
+      {
+        apiKeys: [
+          {
+            key: 'fixture-a',
+            name: 'self',
+            quota: 20,
+            used: 9.8765,
+            'current-month': '2026-10',
+            'key-hash': 'fixture-hash-a',
+          },
+          { key: 'fixture-b', used: 0.5 },
+        ],
+      },
+    ]);
+    expect(refreshed.visualDirty).toBe(false);
+
+    const edited = runVisualConfig(before, [
+      {
+        apiKeys: [
+          {
+            key: 'fixture-a',
+            name: 'self',
+            quota: 20,
+            used: 1.2345,
+            'current-month': '2026-10',
+            'key-hash': 'fixture-hash-a',
+          },
+          { key: 'fixture-b', name: 'friend', used: 0.5 },
+        ],
+      },
+    ]);
+    expect(parseYaml(edited.applyVisualChangesToYaml(before)).access['api-keys']).toEqual([
+      { key: 'fixture-a', name: 'self', quota: 20 },
+      { key: 'fixture-b', name: 'friend' },
+    ]);
   });
 
   test('OAuth edits stay OAuth-only and preserve unmoved routing and plugin fields', () => {
@@ -206,8 +274,7 @@ describe('v8 scalar read/write path parity', () => {
       const path = [...entry.yamlKeys!];
       if (field === 'tlsEnable') path.push('enable');
       if (field === 'pluginsEnabled') path.push('enabled');
-      const expected =
-        field === 'apiKeysText' ? [value] : numericFields.has(field) ? Number(value) : value;
+      const expected = numericFields.has(field) ? Number(value) : value;
       expect(
         path.reduce<unknown>(
           (node, key) => (node as Record<string, unknown>)[key],

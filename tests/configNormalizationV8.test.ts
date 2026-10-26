@@ -33,6 +33,35 @@ describe('v8 persisted configuration normalization', () => {
     ).toEqual({ antigravityCredits: false });
   });
 
+  test('normalizes structured client access keys with backend usage fields', () => {
+    const config = normalizeConfigResponse({
+      access: {
+        'api-keys': [
+          'legacy-client',
+          {
+            key: ' structured-client ',
+            name: ' self ',
+            quota: 20,
+            used: 1.2345,
+            'current-month': '2026-10',
+            'key-hash': 'fixture-hash',
+          },
+        ],
+      },
+    });
+    expect(config.apiKeys).toEqual([
+      { key: 'legacy-client' },
+      {
+        key: 'structured-client',
+        name: 'self',
+        quota: 20,
+        used: 1.2345,
+        'current-month': '2026-10',
+        'key-hash': 'fixture-hash',
+      },
+    ]);
+  });
+
   test('does not interpret legacy root settings as v8 values', () => {
     const config = normalizeConfigResponse({
       'api-keys': ['legacy-client'],
