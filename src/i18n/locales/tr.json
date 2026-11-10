@@ -1487,7 +1487,7 @@
         "add": "API Anahtarı Ekle",
         "generate": "Üret",
         "empty": "API Anahtarı Yok",
-        "hint": "Her Girdi Bir API Anahtarını Temsil Eder ('API Anahtarı Yönetimi' Sayfa Biçimiyle Tutarlı)",
+        "hint": "Her Girdi, İsteğe Bağlı Ad ve Aylık USD Kotası Olan Bir İstemci Anahtarıdır.",
         "edit_title": "API Anahtarını Düzenle",
         "add_title": "API Anahtarı Ekle",
         "input_label": "API Anahtarı",
