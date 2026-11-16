@@ -23,6 +23,20 @@ const readNonNegative = (value: unknown): number | undefined => {
   return value;
 };
 
+/** 读取模型模式白名单：去空白、去空项、按首次出现去重；无有效项返回 undefined。 */
+const readModelPatterns = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const patterns: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    const pattern = trimmed(item);
+    if (!pattern || seen.has(pattern)) continue;
+    seen.add(pattern);
+    patterns.push(pattern);
+  }
+  return patterns.length > 0 ? patterns : undefined;
+};
+
 /**
  * 接受字符串（旧版仅存密钥）或对象；缺少密钥的条目直接丢弃，避免空行进入表单。
  */
@@ -44,6 +58,9 @@ export function normalizeClientApiKeyEntry(entry: unknown): ClientApiKeyEntry | 
 
   const quota = readQuota(record.quota);
   if (quota !== undefined) result.quota = quota;
+
+  const models = readModelPatterns(record.models);
+  if (models) result.models = models;
 
   const used = readNonNegative(record.used);
   if (used !== undefined) result.used = used;
@@ -78,6 +95,9 @@ export function toClientApiKeyWriteEntry(entry: ClientApiKeyEntry): ClientApiKey
 
   const quota = readQuota(entry.quota);
   if (typeof quota === 'number') result.quota = quota;
+
+  const models = readModelPatterns(entry.models);
+  if (models) result.models = models;
 
   return result;
 }

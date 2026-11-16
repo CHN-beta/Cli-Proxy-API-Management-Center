@@ -1528,6 +1528,9 @@
         "quota_label": "月度额度上限（USD，留空为不限额）",
         "quota_placeholder": "例如：20",
         "quota_hint": "每自然月的消费上限（美元）。留空表示不限额。",
+        "models_label": "可用模型",
+        "models_placeholder": "gemini-2.5-*, gpt-5*",
+        "models_hint": "可选的模型白名单，支持大小写不敏感的 '*' 通配符，每行一个或用逗号分隔。留空表示允许所有模型。",
         "error_quota_invalid": "月度额度必须是大于或等于 0 的数字",
         "quota": {
           "usage": "已用 {{used}} / {{quota}}",

@@ -1323,6 +1323,9 @@
         "quota_label": "Hạn mức hàng tháng (USD, để trống là không giới hạn)",
         "quota_placeholder": "Ví dụ: 20",
         "quota_hint": "Giới hạn chi tiêu mỗi tháng bằng USD. Để trống nếu không giới hạn.",
+        "models_label": "Mô hình được phép",
+        "models_placeholder": "gemini-2.5-*, gpt-5*",
+        "models_hint": "Danh sách trắng mẫu mô hình tùy chọn (ký tự đại diện '*' không phân biệt hoa thường, mỗi dòng một mục hoặc cách nhau bằng dấu phẩy). Để trống để cho phép mọi mô hình.",
         "error_quota_invalid": "Hạn mức hàng tháng phải là số lớn hơn hoặc bằng 0",
         "quota": {
           "usage": "Đã dùng {{used}} / {{quota}}",

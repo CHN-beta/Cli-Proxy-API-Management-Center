@@ -112,12 +112,15 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const apiKeyErrorId = `${apiKeyInputId}-error`;
   const quotaInputId = useId();
   const quotaHintId = `${quotaInputId}-hint`;
+  const modelsInputId = useId();
+  const modelsHintId = `${modelsInputId}-hint`;
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [nameValue, setNameValue] = useState('');
   const [quotaValue, setQuotaValue] = useState('');
+  const [modelsValue, setModelsValue] = useState('');
   const [formError, setFormError] = useState('');
 
   const openAddModal = () => {
@@ -125,6 +128,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     setInputValue('');
     setNameValue('');
     setQuotaValue('');
+    setModelsValue('');
     setFormError('');
     setModalOpen(true);
   };
@@ -136,6 +140,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     setInputValue(entry.key);
     setNameValue(entry.name ?? '');
     setQuotaValue(entry.quota === undefined || entry.quota === null ? '' : String(entry.quota));
+    setModelsValue((entry.models ?? []).join('\n'));
     setFormError('');
     setModalOpen(true);
   };
@@ -146,6 +151,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     setInputValue('');
     setNameValue('');
     setQuotaValue('');
+    setModelsValue('');
     setFormError('');
   };
 
@@ -176,10 +182,22 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     }
 
     // 只写可写字段；used / current-month / key-hash 由展示层的专用接口提供。
-    const nextEntry: ClientApiKeyEntry = { key: trimmedKey };
+    // 编辑时以原条目为基准，避免丢弃本表单未呈现的字段（例如 excluded-models）。
+    const nextEntry: ClientApiKeyEntry =
+      editingIndex === null ? { key: trimmedKey } : { ...apiKeys[editingIndex], key: trimmedKey };
     const trimmedName = nameValue.trim();
     if (trimmedName) nextEntry.name = trimmedName;
+    else delete nextEntry.name;
     if (quota !== undefined) nextEntry.quota = quota;
+    else delete nextEntry.quota;
+
+    const models = modelsValue
+      .split(/[\n,]+/)
+      .map((pattern) => pattern.trim())
+      .filter((pattern) => pattern.length > 0)
+      .filter((pattern, index, all) => all.indexOf(pattern) === index);
+    if (models.length > 0) nextEntry.models = models;
+    else delete nextEntry.models;
 
     const nextKeys =
       editingIndex === null
@@ -228,6 +246,9 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                 <span className={styles.apiKeyIdentity}>
                   {entry.name && <span className={styles.apiKeyName}>{entry.name}</span>}
                   <span className={styles.apiKeyValue}>{maskApiKey(entry.key)}</span>
+                  {entry.models && entry.models.length > 0 && (
+                    <span className={styles.apiKeyModels}>{entry.models.join(', ')}</span>
+                  )}
                 </span>
                 <ApiKeyQuotaStatus entry={entry} />
               </span>
@@ -355,6 +376,24 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           />
           <div id={quotaHintId} className="hint">
             {t('config_management.visual.api_keys.quota_hint')}
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor={modelsInputId}>
+            {t('config_management.visual.api_keys.models_label')}
+          </label>
+          <textarea
+            id={modelsInputId}
+            className="input"
+            rows={3}
+            placeholder={t('config_management.visual.api_keys.models_placeholder')}
+            value={modelsValue}
+            onChange={(event) => setModelsValue(event.target.value)}
+            aria-describedby={modelsHintId}
+            disabled={disabled}
+          />
+          <div id={modelsHintId} className="hint">
+            {t('config_management.visual.api_keys.models_hint')}
           </div>
         </div>
       </Modal>

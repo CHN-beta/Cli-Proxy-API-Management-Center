@@ -1534,6 +1534,9 @@
         "quota_label": "Monthly quota (USD, leave empty for unlimited)",
         "quota_placeholder": "For example: 20",
         "quota_hint": "Monthly spend cap in USD. Leave empty for no limit.",
+        "models_label": "Allowed models",
+        "models_placeholder": "gemini-2.5-*, gpt-5*",
+        "models_hint": "Optional allowlist of model patterns (case-insensitive '*' wildcards, one per line or comma separated). Leave empty to allow every model.",
         "error_quota_invalid": "Monthly quota must be a number greater than or equal to 0",
         "quota": {
           "usage": "{{used}} / {{quota}}",

@@ -265,6 +265,16 @@
   font-size: 11px;
 }
 
+.apiKeyModels {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--text-tertiary);
+  font-family: $font-mono;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .apiKeyQuotaText {
   white-space: nowrap;
 }

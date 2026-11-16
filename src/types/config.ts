@@ -18,6 +18,8 @@ export interface ClientApiKeyEntry {
   name?: string;
   /** Monthly USD quota; `null`/absent means unlimited. */
   quota?: number | null;
+  /** Optional allowlist of model patterns (case-insensitive `*` wildcards). */
+  models?: string[];
   /** Current-month USD spend. */
   used?: number;
   /** Billing month, e.g. `"2026-10"`. */
@@ -31,6 +33,7 @@ export interface ClientApiKeyWriteEntry {
   key: string;
   name?: string;
   quota?: number;
+  models?: string[];
 }
 
 export interface Config {

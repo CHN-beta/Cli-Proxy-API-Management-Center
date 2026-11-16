@@ -1534,6 +1534,9 @@
         "quota_label": "월간 할당량 (USD, 비워 두면 무제한)",
         "quota_placeholder": "예: 20",
         "quota_hint": "월간 USD 지출 한도입니다. 비워 두면 제한이 없습니다.",
+        "models_label": "사용 가능한 모델",
+        "models_placeholder": "gemini-2.5-*, gpt-5*",
+        "models_hint": "선택적 모델 허용 목록입니다. 대소문자를 구분하지 않는 '*' 와일드카드를 지원하며 한 줄에 하나 또는 쉼표로 구분합니다. 비워 두면 모든 모델을 허용합니다.",
         "error_quota_invalid": "월간 할당량은 0 이상의 숫자여야 합니다",
         "quota": {
           "usage": "사용 {{used}} / {{quota}}",

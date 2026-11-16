@@ -1534,6 +1534,9 @@
         "quota_label": "Aylık Kota (USD, Sınırsız için Boş Bırak)",
         "quota_placeholder": "Örnek: 20",
         "quota_hint": "USD Cinsinden Aylık Harcama Sınırı. Sınırsız için Boş Bırak.",
+        "models_label": "İzin verilen modeller",
+        "models_placeholder": "gemini-2.5-*, gpt-5*",
+        "models_hint": "İsteğe bağlı model deseni beyaz listesi (büyük/küçük harfe duyarsız '*' joker karakterleri, her satırda bir tane veya virgülle ayrılmış). Tüm modellere izin vermek için boş bırakın.",
         "error_quota_invalid": "Aylık Kota 0 veya Daha Büyük Bir Sayı Olmalıdır",
         "quota": {
           "usage": "{{used}} / {{quota}}",

@@ -1556,6 +1556,9 @@
         "quota_label": "每月額度上限（USD，留空為不限額）",
         "quota_placeholder": "例如：20",
         "quota_hint": "每個自然月的消費上限（美元）。留空表示不限額。",
+        "models_label": "可用模型",
+        "models_placeholder": "gemini-2.5-*, gpt-5*",
+        "models_hint": "可選的模型白名單，支援大小寫不敏感的 '*' 萬用字元，每行一個或以逗號分隔。留空表示允許所有模型。",
         "error_quota_invalid": "每月額度必須是大於或等於 0 的數字",
         "quota": {
           "usage": "已用 {{used}} / {{quota}}",
